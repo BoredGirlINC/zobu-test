@@ -31,7 +31,7 @@ class Candidate(Base):
 
 Base.metadata.create_all(engine)
 
-OPENROUTER_API_KEY = "REMOVEDv1-1209b424cde2b8dab5bed8e21a0086bb7e96b6a3f66c7c6aba0b9b0da1f89c18"
+OPENROUTER_API_KEY = "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"
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # --- Hardcoded property info (do not reveal to candidate) ---
