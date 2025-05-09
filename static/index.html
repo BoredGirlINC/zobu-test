@@ -241,7 +241,7 @@
       const name = document.getElementById('name').value.trim();
       const email = document.getElementById('email').value.trim();
       if (!name || !email) return;
-      const res = await fetch('/start', {
+      const res = await fetch('/api/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId, name, email })
@@ -252,7 +252,7 @@
         onboardForm.style.display = 'none';
         chatContainer.style.display = 'flex';
         // Start with agent's first message
-        fetch('/chat', {
+        fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sessionId, user_message: '' })
@@ -271,7 +271,7 @@
       if (!msg) return;
       appendMessage(msg, 'user');
       userInput.value = '';
-      const res = await fetch('/chat', {
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId, user_message: msg })
