@@ -1,0 +1,6 @@
+fastapi[all]
+uvicorn
+pydantic
+requests
+sqlite3
+sqlalchemy 

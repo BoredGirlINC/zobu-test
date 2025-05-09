@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <meta charset='UTF-8'>
+  <title>ZOBU Admin</title>
+  <style>
+    body { background: #222; color: #f8f8f2; font-family: 'Courier New', Courier, monospace; }
+    h2 { color: #00ff99; }
+    table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+    th, td { border: 1px solid #00ff99; padding: 8px 16px; text-align: left; }
+    th { background: #333; color: #00ff99; cursor: pointer; }
+    tr { background: #222; }
+    tr:hover { background: #333; cursor: pointer; }
+    .modal { display: none; position: fixed; z-index: 10; left: 0; top: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; }
+    .modal-content { background: #222; border: 2px solid #00ff99; border-radius: 8px; padding: 32px 24px; color: #f8f8f2; min-width: 340px; max-width: 80vw; }
+    .close-btn, .export-btn { background: #00ff99; color: #222; border: none; padding: 8px 20px; font-size: 1em; border-radius: 4px; cursor: pointer; float: right; margin-left: 12px; }
+    .close-btn:hover, .export-btn:hover { background: #ffcc00; color: #222; }
+    .export-btn { float: left; margin-left: 0; margin-right: 12px; }
+  </style>
+</head>
+<body>
+  <h2>ZOBU Test Candidates</h2>
+  <table id='candTable'>
+    <thead><tr>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Status</th>
+      <th id='scoreHeader'>Score &#x25B2;&#x25BC;</th>
+      <th id='dateHeader'>Date &#x25B2;&#x25BC;</th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+  <div class='modal' id='summaryModal'>
+    <div class='modal-content'>
+      <button class='export-btn' id='exportChat'>Export Chat</button>
+      <button class='close-btn' id='closeModal'>Close</button>
+      <div id='summaryContent'></div>
+    </div>
+  </div>
+  <script>
+    let candidates = [];
+    let currentCandidate = null;
+    let sortScoreAsc = true;
+    let sortDateAsc = true;
+    async function loadCandidates() {
+      const res = await fetch('/admin/data');
+      candidates = await res.json();
+      renderTable();
+    }
+    function renderTable() {
+      const tbody = document.querySelector('#candTable tbody');
+      tbody.innerHTML = '';
+      candidates.forEach((c, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${c.name}</td><td>${c.email}</td><td>${c.status}</td><td>${c.score}</td><td>${c.date || ''}</td>`;
+        tr.onclick = () => showSummary(c, c.name);
+        tbody.appendChild(tr);
+      });
+    }
+    function showSummary(candidate, name) {
+      currentCandidate = candidate;
+      document.getElementById('summaryContent').innerHTML = `<h3>${name}</h3><pre style='white-space:pre-wrap;'>${candidate.summary}</pre>`;
+      document.getElementById('summaryModal').style.display = 'flex';
+    }
+    document.getElementById('closeModal').onclick = () => {
+      document.getElementById('summaryModal').style.display = 'none';
+    };
+    window.onclick = function(event) {
+      if (event.target == document.getElementById('summaryModal')) {
+        document.getElementById('summaryModal').style.display = 'none';
+      }
+    };
+    document.getElementById('exportChat').onclick = () => {
+      if (!currentCandidate) return;
+      let chat = '';
+      try {
+        let hist;
+        try {
+          // Try parsing as JSON (should work for new data)
+          hist = JSON.parse(currentCandidate.chat_history);
+        } catch {
+          // Fallback: try to eval as JS array (for legacy single-quote data)
+          hist = eval(currentCandidate.chat_history);
+        }
+        chat = hist.map(turn => {
+          let ts = '';
+          if (turn.timestamp) {
+            const d = new Date(turn.timestamp * 1000);
+            ts = d.toLocaleString();
+          }
+          if (turn.user) return `Candidate${ts ? ' [' + ts + ']' : ''}: ${turn.user}`;
+          if (turn.agent) return `Agent${ts ? ' [' + ts + ']' : ''}: ${turn.agent}`;
+          return '';
+        }).join('\n');
+      } catch {
+        chat = 'No chat history available.';
+      }
+      const now = new Date();
+      const ts = `${now.getDate()}${now.toLocaleString('en-us', {month:'short'})}${now.getHours()}${now.getMinutes()}`;
+      const filename = `${currentCandidate.name.replace(/\s+/g,'_')}_${ts}.txt`;
+      const blob = new Blob([chat], {type: 'text/plain'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+    };
+    document.getElementById('scoreHeader').onclick = () => {
+      candidates.sort((a, b) => sortScoreAsc ? a.score - b.score : b.score - a.score);
+      sortScoreAsc = !sortScoreAsc;
+      renderTable();
+    };
+    document.getElementById('dateHeader').onclick = () => {
+      candidates.sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return sortDateAsc ? new Date(a.date) - new Date(b.date) : new Date(b.date) - new Date(a.date);
+      });
+      sortDateAsc = !sortDateAsc;
+      renderTable();
+    };
+    loadCandidates();
+  </script>
+</body>
+</html> 
